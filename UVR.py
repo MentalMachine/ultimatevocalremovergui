@@ -2,6 +2,8 @@
 import time
 #start_time = time.time()
 import audioread
+
+import UVR
 import gui_data.sv_ttk
 import hashlib
 import json
@@ -326,7 +328,8 @@ def drop(event, accept_mode: str = 'files'):
         return    
 
 class ModelData():
-    def __init__(self, model_name: str, 
+    def __init__(self,
+                 model_name: str,
                  selected_process_method=ENSEMBLE_MODE, 
                  is_secondary_model=False, 
                  primary_model_primary_stem=None, 
@@ -337,7 +340,6 @@ class ModelData():
                  is_change_def=False,
                  is_get_hash_dir_only=False,
                  is_vocal_split_model=False):
-
         device_set = root.device_set_var.get()
         self.DENOISER_MODEL = DENOISER_MODEL_PATH
         self.DEVERBER_MODEL = DEVERBER_MODEL_PATH
@@ -1240,6 +1242,7 @@ class ThreadSafeConsole(tk.Text):
         self.update_me()
 
     def write(self, line):
+        print(line)
         self.queue.put(line)
 
     def clear(self):
@@ -1284,17 +1287,19 @@ class MainWindow(TkinterDnD.Tk if is_dnd_compatible else tk.Tk):
     COL1_ROWS = 11
     COL2_ROWS = 11
     
-    def __init__(self):
+    def __init__(self, is_cli: bool = False):
         #Run the __init__ method on the tk.Tk class
         super().__init__()
-        
+
+        self.is_cli = is_cli
+
         self.set_app_font()
 
         style = ttk.Style(self)
         style.map('TCombobox', selectbackground=[('focus', '#0c0c0c')], selectforeground=[('focus', 'white')])
         style.configure('TCombobox', selectbackground='#0c0c0c')
         #style.configure('TCheckbutton', indicatorsize=30)
-        
+
         # Calculate window height
         height = self.IMAGE_HEIGHT + self.FILEPATHS_HEIGHT + self.OPTIONS_HEIGHT
         height += self.CONVERSIONBUTTON_HEIGHT + self.COMMAND_HEIGHT + self.PROGRESS_HEIGHT
@@ -1312,36 +1317,37 @@ class MainWindow(TkinterDnD.Tk if is_dnd_compatible else tk.Tk):
             height=height,
             xpad=int(self.winfo_screenwidth()/2 - width/2),
             ypad=int(self.winfo_screenheight()/2 - height/2 - 30)))
- 
-        self.iconbitmap(ICON_IMG_PATH) if is_windows else self.tk.call('wm', 'iconphoto', self._w, tk.PhotoImage(file=MAIN_ICON_IMG_PATH))
-        self.protocol("WM_DELETE_WINDOW", self.save_values)
-        self.resizable(False, False)
-        
+
         self.msg_queue = queue.Queue()
         # Create a custom style that inherits from the original Combobox style.
-        
-        if not is_windows:
-            self.update()
 
-        #Load Images
-        img = ImagePath(BASE_PATH)
-        self.logo_img = img.open_image(path=img.banner_path, size=(width, height))
-        self.efile_img = img.efile_img
-        self.stop_img = img.stop_img
-        self.help_img = img.help_img
-        self.download_img = img.download_img
-        self.donate_img = img.donate_img
-        self.key_img = img.key_img
-        self.credits_img = img.credits_img
-        
-        self.right_img = img.right_img
-        self.left_img = img.left_img
-        self.img_mapper = {
-            "down":img.down_img,
-            "up":img.up_img,
-            "copy":img.copy_img,
-            "clear":img.clear_img
-        }
+        if not self.is_cli:
+            self.iconbitmap(ICON_IMG_PATH) if is_windows else self.tk.call('wm', 'iconphoto', self._w, tk.PhotoImage(file=MAIN_ICON_IMG_PATH))
+            self.protocol("WM_DELETE_WINDOW", self.save_values)
+            self.resizable(False, False)
+
+            if not is_windows:
+                self.update()
+
+            #Load Images
+            img = ImagePath(BASE_PATH)
+            self.logo_img = img.open_image(path=img.banner_path, size=(width, height))
+            self.efile_img = img.efile_img
+            self.stop_img = img.stop_img
+            self.help_img = img.help_img
+            self.download_img = img.download_img
+            self.donate_img = img.donate_img
+            self.key_img = img.key_img
+            self.credits_img = img.credits_img
+
+            self.right_img = img.right_img
+            self.left_img = img.left_img
+            self.img_mapper = {
+                "down":img.down_img,
+                "up":img.up_img,
+                "copy":img.copy_img,
+                "clear":img.clear_img
+            }
 
         #Placeholders
         self.error_log_var = tk.StringVar(value='')
@@ -1351,21 +1357,24 @@ class MainWindow(TkinterDnD.Tk if is_dnd_compatible else tk.Tk):
         self.vr_primary_model_names = []
         self.mdx_primary_model_names = []
         self.demucs_primary_model_names = []
-        
+
         self.vr_cache_source_mapper = {}
         self.mdx_cache_source_mapper = {}
         self.demucs_cache_source_mapper = {}
-        
+
         # -Tkinter Value Holders-
-        
+
+        # TODO - This is key, as we can configure options in the GUI, save to `data.pkl`, then load as needed,
+        # avoiding needing to passthrough EVERY option (e.g. we can just CLI what we need).
+        # Need to patch in a way to set the `data.pkl` path, but details!
         try:
             self.load_saved_vars(data)
         except Exception as e:
             self.error_log_var.set(error_text('Loading Saved Variables', e))
             self.load_saved_vars(DEFAULT_DATA)
-            
+
         self.cached_sources_clear()
-        
+
         self.method_mapper = {
             VR_ARCH_PM: self.vr_model_var,
             MDX_ARCH_TYPE: self.mdx_net_model_var,
@@ -1380,26 +1389,26 @@ class MainWindow(TkinterDnD.Tk if is_dnd_compatible else tk.Tk):
                                         'other_secondary_model_scale': self.vr_other_secondary_model_scale_var,
                                         'bass_secondary_model_scale': self.vr_bass_secondary_model_scale_var,
                                         'drums_secondary_model_scale': self.vr_drums_secondary_model_scale_var}
-        
+
         self.demucs_secondary_model_vars = {'voc_inst_secondary_model': self.demucs_voc_inst_secondary_model_var,
-                                        'other_secondary_model': self.demucs_other_secondary_model_var,
-                                        'bass_secondary_model': self.demucs_bass_secondary_model_var,
-                                        'drums_secondary_model': self.demucs_drums_secondary_model_var,
-                                        'is_secondary_model_activate': self.demucs_is_secondary_model_activate_var,
-                                        'voc_inst_secondary_model_scale': self.demucs_voc_inst_secondary_model_scale_var,
-                                        'other_secondary_model_scale': self.demucs_other_secondary_model_scale_var,
-                                        'bass_secondary_model_scale': self.demucs_bass_secondary_model_scale_var,
-                                        'drums_secondary_model_scale': self.demucs_drums_secondary_model_scale_var}
-        
+                                            'other_secondary_model': self.demucs_other_secondary_model_var,
+                                            'bass_secondary_model': self.demucs_bass_secondary_model_var,
+                                            'drums_secondary_model': self.demucs_drums_secondary_model_var,
+                                            'is_secondary_model_activate': self.demucs_is_secondary_model_activate_var,
+                                            'voc_inst_secondary_model_scale': self.demucs_voc_inst_secondary_model_scale_var,
+                                            'other_secondary_model_scale': self.demucs_other_secondary_model_scale_var,
+                                            'bass_secondary_model_scale': self.demucs_bass_secondary_model_scale_var,
+                                            'drums_secondary_model_scale': self.demucs_drums_secondary_model_scale_var}
+
         self.mdx_secondary_model_vars = {'voc_inst_secondary_model': self.mdx_voc_inst_secondary_model_var,
-                                        'other_secondary_model': self.mdx_other_secondary_model_var,
-                                        'bass_secondary_model': self.mdx_bass_secondary_model_var,
-                                        'drums_secondary_model': self.mdx_drums_secondary_model_var,
-                                        'is_secondary_model_activate': self.mdx_is_secondary_model_activate_var,
-                                        'voc_inst_secondary_model_scale': self.mdx_voc_inst_secondary_model_scale_var,
-                                        'other_secondary_model_scale': self.mdx_other_secondary_model_scale_var,
-                                        'bass_secondary_model_scale': self.mdx_bass_secondary_model_scale_var,
-                                        'drums_secondary_model_scale': self.mdx_drums_secondary_model_scale_var}
+                                         'other_secondary_model': self.mdx_other_secondary_model_var,
+                                         'bass_secondary_model': self.mdx_bass_secondary_model_var,
+                                         'drums_secondary_model': self.mdx_drums_secondary_model_var,
+                                         'is_secondary_model_activate': self.mdx_is_secondary_model_activate_var,
+                                         'voc_inst_secondary_model_scale': self.mdx_voc_inst_secondary_model_scale_var,
+                                         'other_secondary_model_scale': self.mdx_other_secondary_model_scale_var,
+                                         'bass_secondary_model_scale': self.mdx_bass_secondary_model_scale_var,
+                                         'drums_secondary_model_scale': self.mdx_drums_secondary_model_scale_var}
 
         #Main Application Vars
         self.progress_bar_main_var = tk.IntVar(value=0)
@@ -1421,7 +1430,7 @@ class MainWindow(TkinterDnD.Tk if is_dnd_compatible else tk.Tk):
         self.is_menu_settings_open = False
         self.is_root_defined_var = tk.BooleanVar(value=False)
         self.is_check_splash = False
-        
+
         self.is_open_menu_advanced_vr_options = tk.BooleanVar(value=False)
         self.is_open_menu_advanced_demucs_options = tk.BooleanVar(value=False)
         self.is_open_menu_advanced_mdx_options = tk.BooleanVar(value=False)
@@ -1478,15 +1487,15 @@ class MainWindow(TkinterDnD.Tk if is_dnd_compatible else tk.Tk):
         self.download_progress_info_var = tk.StringVar(value='')
         self.download_progress_percent_var = tk.StringVar(value='')
         self.download_progress_bar_var = tk.IntVar(value=0)
-        self.download_stop_var = tk.StringVar(value='') 
+        self.download_stop_var = tk.StringVar(value='')
         self.app_update_status_Text_var = tk.StringVar(value=LOADING_VERSION_INFO_TEXT)
         self.app_update_button_Text_var = tk.StringVar(value=CHECK_FOR_UPDATES_TEXT)
-        
+
         self.user_code_validation_var = tk.StringVar(value='')
-        self.download_link_path_var = tk.StringVar(value='') 
+        self.download_link_path_var = tk.StringVar(value='')
         self.download_save_path_var = tk.StringVar(value='')
-        self.download_update_link_var = tk.StringVar(value='') 
-        self.download_update_path_var = tk.StringVar(value='') 
+        self.download_update_link_var = tk.StringVar(value='')
+        self.download_update_path_var = tk.StringVar(value='')
         self.download_demucs_models_list = []
         self.download_demucs_newer_models = []
         self.refresh_list_Button = None
@@ -1498,11 +1507,11 @@ class MainWindow(TkinterDnD.Tk if is_dnd_compatible else tk.Tk):
         self.active_download_thread = None
         self.pre_proc_model_toggle = None
         self.change_state_lambda = None
-        self.file_one_sub_var = tk.StringVar(value=FILE_ONE_MAIN_LABEL) 
-        self.file_two_sub_var = tk.StringVar(value=FILE_TWO_MAIN_LABEL) 
+        self.file_one_sub_var = tk.StringVar(value=FILE_ONE_MAIN_LABEL)
+        self.file_two_sub_var = tk.StringVar(value=FILE_TWO_MAIN_LABEL)
         self.cuda_device_list = GPU_DEVICE_NUM_OPTS
         self.opencl_list = GPU_DEVICE_NUM_OPTS
-        
+
         #Model Update
         self.last_found_ensembles = ENSEMBLE_OPTIONS
         self.last_found_settings = ENSEMBLE_OPTIONS
@@ -1510,27 +1519,30 @@ class MainWindow(TkinterDnD.Tk if is_dnd_compatible else tk.Tk):
         self.model_data_table = ()
         self.ensemble_model_list = ()
         self.default_change_model_list = ()
-                
-        # --Widgets--
-        self.fill_main_frame()
-        self.bind_widgets()
-        
-        # --Update Widgets--
-        self.update_available_models()
-        self.update_main_widget_states()
-        self.update_loop()
-        self.update_button_states()
-        self.download_validate_code()
-        self.delete_temps(is_start_up=True)
-        self.ensemble_listbox_Option.configure(state=tk.DISABLED)
-        self.command_Text.write(f'Ultimate Vocal Remover {VERSION} [{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}]')
-        self.update_checkbox_text = lambda:self.selection_action_process_method(self.chosen_process_method_var.get())
-        self.check_dual_paths()
-        if not is_windows:
-            self.update_idletasks()
+
+        if not self.is_cli:
+            # --Widgets--
+            self.fill_main_frame()
+            self.bind_widgets()
+
+            # --Update Widgets--
+            self.update_available_models()
+            self.update_main_widget_states()
+            self.update_loop()
+            self.update_button_states()
+            self.download_validate_code()
+            self.delete_temps(is_start_up=True)
+            self.ensemble_listbox_Option.configure(state=tk.DISABLED)
+            self.command_Text.write(f'Ultimate Vocal Remover {VERSION} [{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}]')
+            self.update_checkbox_text = lambda:self.selection_action_process_method(self.chosen_process_method_var.get())
+            self.check_dual_paths()
+            if not is_windows:
+                self.update_idletasks()
+            self.online_data_refresh(user_refresh=False, is_start_up=True)
+        else:
+            self.register_command_text()
         self.fill_gpu_list()
-        self.online_data_refresh(user_refresh=False, is_start_up=True)
-        
+
     # Menu Functions
     def main_window_LABEL_SET(self, master, text):return ttk.Label(master=master, text=text, background=BG_COLOR, font=self.font_set, foreground=FG_COLOR, anchor=tk.CENTER)
     def main_window_LABEL_SUB_SET(self, master, text_var):return ttk.Label(master=master, textvariable=text_var, background=BG_COLOR, font=self.font_set, foreground=FG_COLOR, anchor=tk.CENTER)
@@ -1670,7 +1682,14 @@ class MainWindow(TkinterDnD.Tk if is_dnd_compatible else tk.Tk):
         self.command_Text = ThreadSafeConsole(master=self.console_Frame, background='#0c0c0d',fg='#898b8e', highlightcolor="#0c0c0d",  font=(MAIN_FONT_NAME, FONT_SIZE_4), borderwidth=0)
         self.command_Text.pack(fill=tk.BOTH, expand=1)
         self.command_Text.bind(right_click_button, lambda e:self.right_click_console(e))
-            
+
+    def register_command_text(self):
+        self.console_Frame = tk.Frame(master=self, highlightbackground='#101012', highlightcolor='#101012',
+                                      highlightthicknes=2)
+        self.command_Text = ThreadSafeConsole(master=self.console_Frame, background='#0c0c0d', fg='#898b8e',
+                                              highlightcolor="#0c0c0d", font=(MAIN_FONT_NAME, FONT_SIZE_4),
+                                              borderwidth=0)
+
     def fill_filePaths_Frame(self):
         """Fill Frame with neccessary widgets"""
 
@@ -3431,7 +3450,7 @@ class MainWindow(TkinterDnD.Tk if is_dnd_compatible else tk.Tk):
         self.download_list_vars = (self.model_download_vr_var,
                                    self.model_download_mdx_var,
                                    self.model_download_demucs_var)
-        
+
         self.online_data_refresh()
 
         self.menu_placement(settings_menu, SETTINGS_GUIDE_TEXT, is_help_hints=True, close_function=lambda:close_window())
@@ -6267,6 +6286,8 @@ class MainWindow(TkinterDnD.Tk if is_dnd_compatible else tk.Tk):
         self.auto_save()
         self.cached_sources_clear()
         self.clear_cache_torch = True
+        if self.is_cli:
+            return
         self.conversion_Button_Text_var.set(START_PROCESSING)
         self.conversion_Button.configure(state=tk.NORMAL)
         self.progress_bar_main_var.set(0)
@@ -6553,7 +6574,8 @@ class MainWindow(TkinterDnD.Tk if is_dnd_compatible else tk.Tk):
         self.true_model_count = 0
         self.iteration = 0
         is_verified_audio = True
-        self.process_button_init()
+        if not self.is_cli:
+            self.process_button_init()
         inputPaths = self.inputPaths
         inputPath_total_len = len(inputPaths)
         is_model_sample_mode = self.model_sample_mode_var.get()
@@ -7245,6 +7267,14 @@ def extract_stems(audio_file_base, export_path):
     filtered_lst = [item for item in stem_list if counter[item] > 1]
 
     return list(set(filtered_lst))
+
+# TODO - Dear god this is horrid... but other class expect 'root' to be set, and call into
+# it to grab data (aka root/MainWindow is acting like a global singleton), hence for CLI
+# we need to it, then pass into this context (since UVR isn't a class, is just a big script... with inner classes xD)
+def set_root(instance: MainWindow):
+    global root
+    root = instance
+
 
 if __name__ == "__main__":
 
