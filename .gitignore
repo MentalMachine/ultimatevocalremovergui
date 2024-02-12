@@ -4,4 +4,5 @@ __pycache__
 **/__pycache__
 .idea
 **/*.onnx
+**/*.ckpt
 gui_data/cr_text.txt
