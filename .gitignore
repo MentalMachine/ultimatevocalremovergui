@@ -1,2 +1,7 @@
 .python-version
 data.pkl
+__pycache__
+**/__pycache__
+.idea
+**/*.onnx
+gui_data/cr_text.txt
