@@ -1,4 +1,7 @@
-FROM nvcr.io/nvidia/cuda:12.3.1-runtime-ubuntu22.04
+# TODO - Check what `devel` means, do not want a jank build bricking things
+FROM nvcr.io/nvidia/cuda:12.2.0-devel-ubuntu22.04
+# TODO - Working... just not with GPU
+#FROM nvcr.io/nvidia/cuda:12.3.1-runtime-ubuntu22.04
 CMD nvidia-smi
 # TODO - Use lighter one... if can
 #FROM python:3.9.16
@@ -16,7 +19,9 @@ RUN apt-get install -y ffmpeg \
   libsndfile1 \
   python3.9 \
   python3-pip \
-  python3-tk
+  python3-tk \
+  xvfb \
+  freeglut3-dev
 
 WORKDIR /opt/ultimateVocalRemoverCli
 COPY . .

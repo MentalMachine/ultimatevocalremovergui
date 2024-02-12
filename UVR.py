@@ -1,3 +1,7 @@
+#
+from pyvirtualdisplay import Display
+from xvfbwrapper import Xvfb
+
 # GUI modules
 import time
 #start_time = time.time()
@@ -95,7 +99,8 @@ def get_execution_time(function, name):
 
 PREVIOUS_PATCH_WIN = 'UVR_Patch_10_6_23_4_27'
 
-is_dnd_compatible = True
+# TODO - How to inject False/True?
+is_dnd_compatible = False
 banner_placement = -2
 
 if OPERATING_SYSTEM=="Darwin":
@@ -1287,12 +1292,24 @@ class MainWindow(TkinterDnD.Tk if is_dnd_compatible else tk.Tk):
     COL1_ROWS = 11
     COL2_ROWS = 11
     
-    def __init__(self, is_cli: bool = False):
+    def __init__(self, is_cli: bool = False, is_headless: bool = False):
+        self.is_cli = is_cli
+        self.is_headless = is_headless
+        if self.is_cli and self.is_headless:
+            vdisplay = Xvfb()
+            vdisplay.start()
+
+            display = Display(visible=False, size=(800, 680))
+            display.start()
+
+            torch.cuda.current_device()
+
+        # TODO - Wants to spin up Tk, which seems to require a 'display' to talk to.
+        # Might have some ways to spin up "headless", as this approach won't work:
+        # https://stackoverflow.com/a/48237220
+        # https://stackoverflow.com/a/48237220
         #Run the __init__ method on the tk.Tk class
         super().__init__()
-
-        self.is_cli = is_cli
-
         self.set_app_font()
 
         style = ttk.Style(self)
@@ -6563,7 +6580,7 @@ class MainWindow(TkinterDnD.Tk if is_dnd_compatible else tk.Tk):
                 return 1
         
         return 0
-        
+
     def process_start(self):
         """Start the conversion for all the given mp3 and wav files"""
         
@@ -6581,6 +6598,7 @@ class MainWindow(TkinterDnD.Tk if is_dnd_compatible else tk.Tk):
         is_model_sample_mode = self.model_sample_mode_var.get()
         
         try:
+            self.command_Text.write(f'chosen_process_method_var -> [{self.chosen_process_method_var.get()}]')
             if self.chosen_process_method_var.get() == ENSEMBLE_MODE:
                 model, ensemble = self.assemble_model_data(), Ensembler()
                 export_path, is_ensemble = ensemble.ensemble_folder_name, True
@@ -6590,7 +6608,7 @@ class MainWindow(TkinterDnD.Tk if is_dnd_compatible else tk.Tk):
                 model = self.assemble_model_data(self.mdx_net_model_var.get(), MDX_ARCH_TYPE)
             if self.chosen_process_method_var.get() == DEMUCS_ARCH_TYPE:
                 model = self.assemble_model_data(self.demucs_model_var.get(), DEMUCS_ARCH_TYPE)
-
+            self.command_Text.write(f'model -> [{model}]')
             self.cached_source_model_list_check(model)
             
             true_model_4_stem_count = sum(m.demucs_4_stem_added_count if m.process_method == DEMUCS_ARCH_TYPE else 0 for m in model)
@@ -6702,6 +6720,7 @@ class MainWindow(TkinterDnD.Tk if is_dnd_compatible else tk.Tk):
                         
         except Exception as e:
             self.error_log_var.set("{}{}".format(error_text(self.chosen_process_method_var.get(), e), self.get_settings_list()))
+            self.command_Text.write(f'\n\n{self.error_log_var.get()}')
             self.command_Text.write(f'\n\n{PROCESS_FAILED}')
             self.command_Text.write(time_elapsed())
             playsound(FAIL_CHIME) if self.is_task_complete_var.get() else None
@@ -6736,6 +6755,8 @@ class MainWindow(TkinterDnD.Tk if is_dnd_compatible else tk.Tk):
         )):
             self.change_state_lambda()
 
+    # TODO - Encapsulate into class? But how do get around resulting `self|instance.chosen_process_method_var.get()`?
+    # Well don't care, just need to do this for `process_start()`... and all the dependent methods :(
     def load_saved_vars(self, data):
         """Initializes primary Tkinter vars"""
         

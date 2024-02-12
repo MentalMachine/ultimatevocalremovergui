@@ -207,6 +207,7 @@ class SeperateAttributes:
                     self.primary_stem = model_data.ensemble_primary_stem if process_data['is_ensemble_master'] else model_data.primary_stem
                     self.secondary_stem = model_data.ensemble_secondary_stem if process_data['is_ensemble_master'] else model_data.secondary_stem
             else:
+                print(f'model_data -> [{model_data}]')
                 self.dim_f, self.dim_t = model_data.mdx_dim_f_set, 2**model_data.mdx_dim_t_set
                 
             self.check_label_secondary_stem_runs()
