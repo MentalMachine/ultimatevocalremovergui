@@ -1292,22 +1292,16 @@ class MainWindow(TkinterDnD.Tk if is_dnd_compatible else tk.Tk):
     COL1_ROWS = 11
     COL2_ROWS = 11
     
-    def __init__(self, is_cli: bool = False, is_headless: bool = False):
+    def __init__(self, is_cli: bool = False, should_emulate_display: bool = False):
         self.is_cli = is_cli
-        self.is_headless = is_headless
-        if self.is_cli and self.is_headless:
+        self.should_emulate_display = should_emulate_display
+        if self.should_emulate_display:
             vdisplay = Xvfb()
             vdisplay.start()
 
             display = Display(visible=False, size=(800, 680))
             display.start()
 
-            torch.cuda.current_device()
-
-        # TODO - Wants to spin up Tk, which seems to require a 'display' to talk to.
-        # Might have some ways to spin up "headless", as this approach won't work:
-        # https://stackoverflow.com/a/48237220
-        # https://stackoverflow.com/a/48237220
         #Run the __init__ method on the tk.Tk class
         super().__init__()
         self.set_app_font()
@@ -6598,7 +6592,6 @@ class MainWindow(TkinterDnD.Tk if is_dnd_compatible else tk.Tk):
         is_model_sample_mode = self.model_sample_mode_var.get()
         
         try:
-            self.command_Text.write(f'chosen_process_method_var -> [{self.chosen_process_method_var.get()}]')
             if self.chosen_process_method_var.get() == ENSEMBLE_MODE:
                 model, ensemble = self.assemble_model_data(), Ensembler()
                 export_path, is_ensemble = ensemble.ensemble_folder_name, True
@@ -6608,7 +6601,6 @@ class MainWindow(TkinterDnD.Tk if is_dnd_compatible else tk.Tk):
                 model = self.assemble_model_data(self.mdx_net_model_var.get(), MDX_ARCH_TYPE)
             if self.chosen_process_method_var.get() == DEMUCS_ARCH_TYPE:
                 model = self.assemble_model_data(self.demucs_model_var.get(), DEMUCS_ARCH_TYPE)
-            self.command_Text.write(f'model -> [{model}]')
             self.cached_source_model_list_check(model)
             
             true_model_4_stem_count = sum(m.demucs_4_stem_added_count if m.process_method == DEMUCS_ARCH_TYPE else 0 for m in model)

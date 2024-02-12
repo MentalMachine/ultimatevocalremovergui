@@ -29,4 +29,5 @@ COPY . .
 ENV SKLEARN_ALLOW_DEPRECATED_SKLEARN_PACKAGE_INSTALL=True
 RUN pip3 install -r requirements.txt
 
+ENV UVR_emulate_display=True
 ENTRYPOINT ["python3", "/opt/ultimateVocalRemoverCli/cli.py"]
