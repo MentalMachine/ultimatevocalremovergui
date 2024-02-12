@@ -1,5 +1,6 @@
 .python-version
 data.pkl
+models
 Dockerfile
 ensemble_temps
 temp_sample_clips

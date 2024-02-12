@@ -24,11 +24,6 @@ def process(input_files: List[str], output_dir: str, is_gpu_conversion: bool, is
     # Need to do this, as a lot of state is global (e.g. new objects refer to state in `root` on init ...)
     UVR.set_root(root)
 
-    # TODO - This nonsense is due to the fact that some settings are being 'wiped'
-    # when running with virtual display, suspect the TK lib is relying on the GUI to
-    # refresh some data? Hence the CLI falls over, unless we manually set things *again*?
-    # TODO - When running locally (e.g. not in headless) this list loads correctly, so we can
-    # diff to see the difference between docker and local (yay).
     _apply_setting(root, input_files, output_dir_path, is_gpu_conversion, is_only_vocals)
 
     root.process_start()
@@ -36,6 +31,9 @@ def process(input_files: List[str], output_dir: str, is_gpu_conversion: bool, is
 
 
 def _apply_setting(root: UVR.MainWindow, input_files: list[str], output_dir_path: str, is_gpu_conversion: bool, is_only_vocals: bool):
+    # In docker, we do not copy across any local `data.pkl` file, so we will load the
+    # default settings (see `gui_data/constants.py` -> `DEFAULT_DATA`) first, then "apply" what we want.
+    # Alternatively, a manually curated `data.pkl` can be made via the GUI, then mounted it and then tweaked as needed.
     root.command_Text.write(f'Loaded settings: {root.get_settings_list()}')
     root.command_Text.write(f'Applying settings from CLI ...')
 
