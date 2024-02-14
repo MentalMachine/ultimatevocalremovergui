@@ -1,13 +1,5 @@
-# TODO - Check what `devel` means, do not want a jank build bricking things
-FROM nvcr.io/nvidia/cuda:12.2.0-devel-ubuntu22.04
-# TODO - Working... just not with GPU
-#FROM nvcr.io/nvidia/cuda:12.3.1-runtime-ubuntu22.04
+FROM nvcr.io/nvidia/cuda:12.2.2-runtime-ubuntu22.04
 CMD nvidia-smi
-# TODO - Use lighter one... if can
-#FROM python:3.9.16
-
-# If using other image, need to: install pyenv
-# install specific python
 
 RUN apt-get update
 # Needed to then be able to add repos
