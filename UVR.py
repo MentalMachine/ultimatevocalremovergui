@@ -6701,12 +6701,14 @@ class MainWindow(TkinterDnD.Tk if is_dnd_compatible else tk.Tk):
             if inputPath_total_len == 1 and not is_verified_audio:
                 self.command_Text.write(f'{error_text_console}\n{PROCESS_FAILED}')
                 self.command_Text.write(time_elapsed())
-                playsound(FAIL_CHIME) if self.is_task_complete_var.get() else None
+                if not self.is_cli:
+                    playsound(FAIL_CHIME) if self.is_task_complete_var.get() else None
             else:
-                set_progress_bar(1.0)
                 self.command_Text.write(PROCESS_COMPLETE)
                 self.command_Text.write(time_elapsed())
-                playsound(COMPLETE_CHIME) if self.is_task_complete_var.get() else None
+                if not self.is_cli:
+                    set_progress_bar(1.0)
+                    playsound(COMPLETE_CHIME) if self.is_task_complete_var.get() else None
                 
             self.process_end()
                         
@@ -6715,7 +6717,8 @@ class MainWindow(TkinterDnD.Tk if is_dnd_compatible else tk.Tk):
             self.command_Text.write(f'\n\n{self.error_log_var.get()}')
             self.command_Text.write(f'\n\n{PROCESS_FAILED}')
             self.command_Text.write(time_elapsed())
-            playsound(FAIL_CHIME) if self.is_task_complete_var.get() else None
+            if not self.is_cli:
+                playsound(FAIL_CHIME) if self.is_task_complete_var.get() else None
             self.process_end(error=e)
 
     #--Varible Methods--
